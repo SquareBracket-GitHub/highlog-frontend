@@ -1,15 +1,58 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { studentService } from '../services';
+import { setCurrentStudent } from '../store/auth';
 import { CommonStyles } from './styles';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [grade, setGrade] = useState('');
   const [classNo, setClassNo] = useState('');
+  const [schoolNumber, setSchoolNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (
+      !name.trim() ||
+      !loginId.trim() ||
+      !password.trim() ||
+      !grade.trim() ||
+      !classNo.trim() ||
+      !schoolNumber.trim()
+    ) {
+      Alert.alert('오류', '모든 필드를 입력하세요');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const gradeNum = parseInt(grade, 10);
+      const classNoNum = parseInt(classNo, 10);
+      const schoolNumberNum = parseInt(schoolNumber, 10);
+
+      const newStudent = await studentService.create({
+        username: name,
+        login_id: loginId,
+        password,
+        grade: gradeNum,
+        class_no: classNoNum,
+        school_number: schoolNumberNum,
+      });
+
+      Alert.alert('성공', '회원가입이 완료되었습니다');
+      setCurrentStudent(newStudent);
+      router.push('/schedules');
+    } catch (error) {
+      Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -32,16 +75,18 @@ export default function RegisterScreen() {
         placeholder="이름을 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
+        editable={!loading}
       />
 
       {/* 아이디 */}
       <InputLabel label="아이디" />
       <TextInput
-        value={username}
-        onChangeText={setUsername}
+        value={loginId}
+        onChangeText={setLoginId}
         placeholder="아이디를 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
+        editable={!loading}
       />
 
       {/* 비밀번호 */}
@@ -53,6 +98,7 @@ export default function RegisterScreen() {
         placeholder="비밀번호를 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
+        editable={!loading}
       />
 
       {/* 학년 */}
@@ -60,9 +106,11 @@ export default function RegisterScreen() {
       <TextInput
         value={grade}
         onChangeText={setGrade}
-        placeholder="예: 1학년"
+        placeholder="예: 1"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
+        keyboardType="numeric"
+        editable={!loading}
       />
 
       {/* 반 */}
@@ -70,21 +118,38 @@ export default function RegisterScreen() {
       <TextInput
         value={classNo}
         onChangeText={setClassNo}
-        placeholder="예: 3반"
+        placeholder="예: 3"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
+        keyboardType="numeric"
+        editable={!loading}
+      />
+
+      {/* 학번 */}
+      <InputLabel label="학번" />
+      <TextInput
+        value={schoolNumber}
+        onChangeText={setSchoolNumber}
+        placeholder="예: 1"
+        placeholderTextColor="#AAA"
+        style={CommonStyles.inputWithMargin}
+        keyboardType="numeric"
+        editable={!loading}
       />
 
       {/* 가입 버튼 */}
       <TouchableOpacity
-        onPress={() => router.push('/login')}
+        onPress={handleRegister}
         style={[CommonStyles.primaryButton, { marginTop: 20, marginBottom: 20 }]}
+        disabled={loading}
       >
-        <Text style={CommonStyles.primaryButtonText}>가입하기</Text>
+        <Text style={CommonStyles.primaryButtonText}>
+          {loading ? '가입 중...' : '가입하기'}
+        </Text>
       </TouchableOpacity>
 
       {/* 로그인 이동 */}
-      <TouchableOpacity onPress={() => router.push('/login')}>
+      <TouchableOpacity onPress={() => router.push('/login')} disabled={loading}>
         <Text style={CommonStyles.secondaryText}>이미 계정이 있으신가요?</Text>
       </TouchableOpacity>
     </ScrollView>

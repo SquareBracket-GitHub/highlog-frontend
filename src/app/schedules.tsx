@@ -1,25 +1,86 @@
-import { Dimensions, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Dimensions, ScrollView, Text, View } from 'react-native';
 
 import BottomNav from '../components/BottomNav';
+import { courseService, enrolmentService } from '../services';
+import { getCurrentStudent } from '../store/auth';
 import { CommonStyles, getSubjectColor } from './styles';
 
-const timetable = [
-  ['수학', '영어', '국어', '한국사', '수학'],
-  ['영어', '수학', '영어', '국어', '영어'],
-  ['국어', '국어', '수학', '영어', '국어'],
-  ['물리학Ⅰ', '체육', '음악', '물리학Ⅰ', '체육'],
-  ['자율활동', '창체', '진로', '창체', '자율활동'],
-  ['', '', '생명과학Ⅰ', '', ''],
-  ['', '', '', '', ''],
-];
-
-const periods = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시', '7교시'];
+interface TimetableData {
+  [day: string]: { [period: number]: string };
+}
 
 const days = ['월', '화', '수', '목', '금'];
+const periods = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시', '7교시'];
 const screenWidth = Dimensions.get('window').width;
 const cellWidth = (screenWidth - 24) / 6;
 
 export default function ScheduleScreen() {
+  const [timetable, setTimetable] = useState<TimetableData>({});
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSchedule();
+    }, [])
+  );
+
+  const loadSchedule = async () => {
+    setLoading(true);
+    try {
+      const student = getCurrentStudent();
+      if (!student) {
+        Alert.alert('오류', '로그인 정보가 없습니다');
+        return;
+      }
+
+      // 학생의 등록된 과목들 조회
+      const enrolments = await enrolmentService.getByStudent(student.id);
+
+      // 과목 정보 조회 및 시간표 구성
+      const timetableData: TimetableData = {};
+
+      for (const enrolment of enrolments) {
+        const course = await courseService.getById(enrolment.course_id);
+
+        // 과목의 요일과 교시 정보 처리
+        if (course.days && Array.isArray(course.days)) {
+          for (const schedule of course.days) {
+            const day = schedule.day;
+            const period = schedule.period;
+
+            if (!timetableData[day]) {
+              timetableData[day] = {};
+            }
+
+            timetableData[day][period] = course.title;
+          }
+        }
+      }
+
+      setTimetable(timetableData);
+    } catch (error) {
+      Alert.alert('오류', '시간표를 불러올 수 없습니다');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={CommonStyles.container}>
+        <View style={CommonStyles.headerSection}>
+          <Text style={CommonStyles.title}>내 시간표</Text>
+        </View>
+        <Text style={{ textAlign: 'center', marginTop: 20 }}>
+          시간표를 불러오는 중...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={CommonStyles.container}>
       {/* 상단 */}
@@ -43,15 +104,19 @@ export default function ScheduleScreen() {
           </View>
 
           {/* 시간표 */}
-          {timetable.map((row, rowIndex) => (
-            <View key={rowIndex} style={CommonStyles.flexRow}>
+          {periods.map((period, periodIndex) => (
+            <View key={periodIndex} style={CommonStyles.flexRow}>
               {/* 교시 */}
-              <Cell text={periods[rowIndex]} side />
+              <Cell text={period} side />
 
-              {/* 과목 */}
-              {row.map((subject, colIndex) => (
-                <SubjectCell key={colIndex} subject={subject} />
-              ))}
+              {/* 각 요일의 과목 */}
+              {days.map((day) => {
+                const subject = timetable[day]?.[periodIndex + 1] || '';
+
+                return (
+                  <SubjectCell key={`${day}-${periodIndex}`} subject={subject} />
+                );
+              })}
             </View>
           ))}
         </View>
