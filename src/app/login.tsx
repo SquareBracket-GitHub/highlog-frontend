@@ -7,6 +7,7 @@ import { studentService } from '../services';
 import { CommonStyles } from './styles';
 
 export default function LoginScreen() {
+  // const [username, setUsername] = useState('');
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,8 +52,8 @@ export default function LoginScreen() {
       <View style={CommonStyles.inputSection}>
         <Text style={CommonStyles.inputLabel}>아이디</Text>
         <TextInput
-          value={username}
-          onChangeText={setUsername}
+          value={loginId}
+          onChangeText={setLoginId}
           placeholder="아이디를 입력하세요"
           placeholderTextColor="#AAA"
           style={CommonStyles.input}

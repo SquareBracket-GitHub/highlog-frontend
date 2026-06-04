@@ -2,7 +2,7 @@ import { ApiClient } from './api';
 
 export interface DaySchedule {
   day: string;
-  period: number;
+  period: number | string;
 }
 
 export interface Course {

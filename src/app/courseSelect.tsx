@@ -4,6 +4,7 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import BottomNav from '../components/BottomNav';
 import { courseService, enrolmentService } from '../services';
+import { ApiClient } from '../services/api';
 import { getCurrentStudent } from '../store/auth';
 import { CommonStyles } from './styles';
 
@@ -25,17 +26,39 @@ export default function CourseSelectScreen() {
     }, [])
   );
 
+  const normalizeCourseIds = (enrolments: { course_id: number | string }[]) => {
+    const ids: number[] = [];
+    for (const e of enrolments) {
+      const num = Number(e.course_id);
+      if (Number.isInteger(num) && num > 0) {
+        ids.push(num);
+      }
+    }
+    return Array.from(new Set(ids));
+  };
+
   const loadCourses = async () => {
     setLoading(true);
     try {
       const allCourses = await courseService.getAll();
-      setCourses(allCourses as CourseItem[]);
+      console.log('loadCourses - allCourses:', allCourses);
+      
+      // courses 배열의 id를 number로 정규화
+      const normalizedCourses = (allCourses as CourseItem[]).map(c => ({
+        ...c,
+        id: Number(c.id)
+      }));
+      console.log('loadCourses - normalizedCourses:', normalizedCourses);
+      setCourses(normalizedCourses);
 
       // 현재 학생의 등록된 과목 조회
       const student = getCurrentStudent();
       if (student) {
         const enrolments = await enrolmentService.getByStudent(student.id);
-        setSelectedCourses(enrolments.map((e) => e.course_id));
+        console.log('loadCourses - enrolments from API:', enrolments);
+        const normalized = normalizeCourseIds(enrolments);
+        console.log('loadCourses - normalized:', normalized);
+        setSelectedCourses(normalized);
       }
     } catch (error) {
       Alert.alert('오류', '과목 목록을 불러올 수 없습니다');
@@ -46,11 +69,16 @@ export default function CourseSelectScreen() {
   };
 
   const toggleCourse = (courseId: number) => {
-    if (selectedCourses.includes(courseId)) {
-      setSelectedCourses(selectedCourses.filter((id) => id !== courseId));
-    } else {
-      setSelectedCourses([...selectedCourses, courseId]);
-    }
+    const id = Number(courseId);
+    console.log('toggleCourse called with:', id, typeof id);
+    
+    setSelectedCourses((prev) => {
+      const newSelected = prev.indexOf(id) !== -1
+        ? prev.filter((x) => x !== id)
+        : [...prev, id];
+      console.log('toggleCourse - prev:', prev, '-> new:', newSelected);
+      return newSelected;
+    });
   };
 
   const handleSave = async () => {
@@ -62,32 +90,71 @@ export default function CourseSelectScreen() {
 
     setSaving(true);
     try {
-      // 기존 등록 조회
+      console.log('=== handleSave START ===');
+      console.log('selectedCourses from state:', selectedCourses);
+      console.log('courses from state:', courses);
+      
       const existingEnrolments = await enrolmentService.getByStudent(student.id);
-      const existingCourseIds = existingEnrolments.map((e) => e.course_id);
+      console.log('existingEnrolments:', existingEnrolments);
+      
+      const existingCourseIds = normalizeCourseIds(existingEnrolments);
+      console.log('existingCourseIds:', existingCourseIds);
 
-      // 삭제할 과목 (기존에는 있지만 선택되지 않은 과목)
-      const toDelete = existingCourseIds.filter((id) => !selectedCourses.includes(id));
+      const toDelete = existingCourseIds.filter((id) => selectedCourses.indexOf(id) === -1);
+      console.log('toDelete:', toDelete, 'count:', toDelete.length);
 
-      // 추가할 과목 (선택되었지만 기존에 없는 과목)
-      const toAdd = selectedCourses.filter((id) => !existingCourseIds.includes(id));
+      // toAdd 계산 과정을 상세히 로깅
+      console.log('Calculating toAdd:');
+      console.log('  selectedCourses:', selectedCourses);
+      console.log('  existingCourseIds:', existingCourseIds);
+      
+      const toAdd = selectedCourses.filter((id) => {
+        const isInExisting = existingCourseIds.indexOf(id) !== -1;
+        console.log(`    checking id=${id}: in existing? ${isInExisting}`);
+        return !isInExisting;
+      });
+      
+      console.log('toAdd result:', toAdd, 'count:', toAdd.length);
 
-      // 삭제 작업
       for (const courseId of toDelete) {
+        console.log('DELETE enrolment:', courseId);
         await enrolmentService.delete(student.id, courseId);
       }
+      console.log(
+        'existingCourseIds type:',
+        existingCourseIds.constructor?.name
+      );
 
-      // 추가 작업
-      for (const courseId of toAdd) {
-        await enrolmentService.create(student.id, courseId);
+      console.log(
+        'selectedCourses type:',
+        selectedCourses.constructor?.name
+      );
+      if (toAdd.length > 0) {
+        console.log('Starting CREATE loop with', toAdd.length, 'items');
+        for (const courseId of toAdd) {
+          console.log('CREATE enrolment:', courseId, typeof courseId);
+          if (typeof enrolmentService.create === 'function') {
+            await enrolmentService.create(student.id, courseId);
+          } else {
+            console.warn('enrolmentService.create is not a function, using ApiClient.post fallback');
+            await ApiClient.post('/enrolments', {
+              student_id: student.id,
+              course_id: courseId,
+            });
+          }
+        }
+      } else {
+        console.warn('toAdd is empty - no create operations');
       }
 
       Alert.alert('성공', '과목 선택이 저장되었습니다');
+      loadCourses();
     } catch (error) {
       Alert.alert('오류', '저장 중 오류가 발생했습니다');
-      console.error(error);
+      console.error('handleSave error:', error);
     } finally {
       setSaving(false);
+      console.log('=== handleSave END ===');
     }
   };
 
@@ -113,11 +180,11 @@ export default function CourseSelectScreen() {
         ) : (
           <>
             {courses.map((course) => {
-              const selected = selectedCourses.includes(course.id);
+              const selected = selectedCourses.indexOf(course.id) !== -1;
 
               return (
                 <TouchableOpacity
-                  key={course.id}
+                  key={String(course.id)}
                   onPress={() => toggleCourse(course.id)}
                   disabled={saving}
                   style={[

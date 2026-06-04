@@ -7,26 +7,53 @@ import { courseService, enrolmentService } from '../services';
 import { getCurrentStudent } from '../store/auth';
 import { CommonStyles, getSubjectColor } from './styles';
 
+interface TimetableCell {
+  title: string;
+  classroom: string;
+}
+
 interface TimetableData {
-  [day: string]: { [period: number]: string };
+  [day: string]: { [period: string]: TimetableCell };
 }
 
 const days = ['월', '화', '수', '목', '금'];
 const periods = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시', '7교시'];
 const screenWidth = Dimensions.get('window').width;
 const cellWidth = (screenWidth - 24) / 6;
+const cellHeight = 66;
+
+const dayNameMap: Record<string, string> = {
+  월요일: '월',
+  화요일: '화',
+  수요일: '수',
+  목요일: '목',
+  금요일: '금',
+};
+
+const normalizeDay = (day: string): string => {
+  const trimmed = day?.trim();
+  if (!trimmed) return '';
+  if (dayNameMap[trimmed]) return dayNameMap[trimmed];
+  return trimmed.slice(0, 1);
+};
+
+const normalizePeriod = (period: number | string): string => {
+  if (period === undefined || period === null) {
+    return '';
+  }
+  const value = typeof period === 'number' ? period.toString() : period.toString().trim();
+  const digits = value.match(/\d+/)?.[0];
+  if (digits) {
+    return String(parseInt(digits, 10));
+  }
+  return value;
+};
 
 export default function ScheduleScreen() {
   const [timetable, setTimetable] = useState<TimetableData>({});
   const [loading, setLoading] = useState(true);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadSchedule();
-    }, [])
-  );
-
-  const loadSchedule = async () => {
+  const loadSchedule = useCallback(async () => {
     setLoading(true);
     try {
       const student = getCurrentStudent();
@@ -44,17 +71,23 @@ export default function ScheduleScreen() {
       for (const enrolment of enrolments) {
         const course = await courseService.getById(enrolment.course_id);
 
-        // 과목의 요일과 교시 정보 처리
         if (course.days && Array.isArray(course.days)) {
           for (const schedule of course.days) {
-            const day = schedule.day;
-            const period = schedule.period;
+            const day = normalizeDay(schedule.day);
+            const period = normalizePeriod(schedule.period);
+
+            if (!day || !period) {
+              continue;
+            }
 
             if (!timetableData[day]) {
               timetableData[day] = {};
             }
 
-            timetableData[day][period] = course.title;
+            timetableData[day][period] = {
+              title: course.title,
+              classroom: course.classroom,
+            };
           }
         }
       }
@@ -66,7 +99,13 @@ export default function ScheduleScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSchedule();
+    }, [loadSchedule])
+  );
 
   if (loading) {
     return (
@@ -111,7 +150,7 @@ export default function ScheduleScreen() {
 
               {/* 각 요일의 과목 */}
               {days.map((day) => {
-                const subject = timetable[day]?.[periodIndex + 1] || '';
+                const subject = timetable[day]?.[periodIndex + 1];
 
                 return (
                   <SubjectCell key={`${day}-${periodIndex}`} subject={subject} />
@@ -143,7 +182,7 @@ function Cell({
         CommonStyles.cellBase,
         {
           width: cellWidth,
-          height: 54,
+          height: header ? 54 : cellHeight,
         },
         header && CommonStyles.cellHeader,
         side && CommonStyles.cellSide,
@@ -161,8 +200,10 @@ function Cell({
   );
 }
 
-function SubjectCell({ subject }: { subject: string }) {
-  const backgroundColor = getSubjectColor(subject);
+function SubjectCell({ subject }: { subject?: TimetableCell }) {
+  const title = subject?.title || '';
+  const classroom = subject?.classroom || '';
+  const backgroundColor = getSubjectColor(title);
 
   return (
     <View
@@ -170,12 +211,18 @@ function SubjectCell({ subject }: { subject: string }) {
         CommonStyles.cellBase,
         {
           width: cellWidth,
-          height: 54,
+          height: cellHeight,
           backgroundColor,
+          paddingHorizontal: 4,
+          paddingVertical: 6,
         },
+        !title && CommonStyles.cellDefault,
       ]}
     >
-      <Text style={CommonStyles.subjectCellText}>{subject}</Text>
+      <Text style={CommonStyles.subjectCellTitle}>{title}</Text>
+      {classroom ? (
+        <Text style={CommonStyles.subjectCellPlace}>{classroom}</Text>
+      ) : null}
     </View>
   );
 }

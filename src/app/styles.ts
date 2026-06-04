@@ -317,6 +317,22 @@ export const CommonStyles = StyleSheet.create({
     color: '#333',
   },
 
+  subjectCellTitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#222',
+    paddingHorizontal: 4,
+  },
+
+  subjectCellPlace: {
+    marginTop: 4,
+    fontSize: 11,
+    textAlign: 'center',
+    color: '#555',
+  },
+
   subjectCellText: {
     fontSize: 12,
     textAlign: 'center',
