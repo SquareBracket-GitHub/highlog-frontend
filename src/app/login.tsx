@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { setCurrentStudent } from '../store/auth';
-import { studentService } from '../services';
+import type { Student } from '../services';
+import { ApiClient } from '../services/api';
 import { CommonStyles } from './styles';
 
 export default function LoginScreen() {
   // const [username, setUsername] = useState('');
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!loginId.trim() || !password.trim()) {
@@ -18,25 +19,19 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
-      const students = await studentService.getAll();
-      const student = students.find((s) => s.login_id === loginId);
-
-      if (!student) {
-        Alert.alert('오류', '존재하지 않는 아이디입니다');
-        return;
-      }
-
-      // 실제 암호화된 비밀번호 검증은 백엔드에서 처리하고,
-      // 여기서는 임시로 사용자를 저장
-      setCurrentStudent(student);
-      router.push('/schedules');
+      const session = await ApiClient.post<{ student: Student; token: string }>(
+        '/auth/login',
+        { loginId: loginId.trim(), password }
+      );
+      setCurrentStudent(session.student, session.token);
+      router.replace('/schedules');
     } catch (error) {
-      Alert.alert('오류', '로그인 중 오류가 발생했습니다');
+      Alert.alert('오류', '아이디 또는 비밀번호를 확인하세요');
       console.error(error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -57,7 +52,7 @@ export default function LoginScreen() {
           placeholder="아이디를 입력하세요"
           placeholderTextColor="#AAA"
           style={CommonStyles.input}
-          editable={!loading}
+          editable={!isLoading}
         />
       </View>
 
@@ -71,7 +66,7 @@ export default function LoginScreen() {
           placeholder="비밀번호를 입력하세요"
           placeholderTextColor="#AAA"
           style={CommonStyles.input}
-          editable={!loading}
+          editable={!isLoading}
         />
       </View>
 
@@ -79,15 +74,15 @@ export default function LoginScreen() {
       <TouchableOpacity
         onPress={handleLogin}
         style={CommonStyles.primaryButton}
-        disabled={loading}
+        disabled={isLoading}
       >
         <Text style={CommonStyles.primaryButtonText}>
-          {loading ? '로그인 중...' : '로그인'}
+          {isLoading ? '로그인 중...' : '로그인'}
         </Text>
       </TouchableOpacity>
 
       {/* 회원가입 */}
-      <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
+      <TouchableOpacity onPress={() => router.push('/register')} disabled={isLoading}>
         <Text style={CommonStyles.secondaryText}>회원가입</Text>
       </TouchableOpacity>
 

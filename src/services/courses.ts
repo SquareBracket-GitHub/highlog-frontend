@@ -10,12 +10,14 @@ export interface Course {
   title: string;
   classroom: string;
   days: DaySchedule[];
+  tag: string;
 }
 
 export interface CreateCourseInput {
   title: string;
   classroom: string;
   days: DaySchedule[];
+  tag: string;
 }
 
 export const courseService = {

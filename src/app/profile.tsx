@@ -12,7 +12,7 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState(student?.username || '');
   const [editGrade, setEditGrade] = useState(student?.grade.toString() || '');
-  const [editClassNo, setEditClassNo] = useState(student?.class_no.toString() || '');
+  const [editClassNo, setEditClassNo] = useState(student?.classNo.toString() || '');
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -40,8 +40,8 @@ export default function ProfileScreen() {
       await studentService.update(student.id, {
         username: editUsername,
         grade: gradeNum,
-        class_no: classNoNum,
-        school_number: student.school_number,
+        classNo: classNoNum,
+        schoolNumber: student.schoolNumber,
       });
 
       Alert.alert('성공', '정보가 수정되었습니다');
@@ -95,7 +95,7 @@ export default function ProfileScreen() {
             <>
               <Text style={CommonStyles.profileName}>{student.username}</Text>
               <Text style={CommonStyles.profileSubtitle}>
-                {student.grade}학년 {student.class_no}반
+                {student.grade}학년 {student.classNo}반
               </Text>
             </>
           )}
@@ -106,8 +106,8 @@ export default function ProfileScreen() {
           <>
             <InfoRow label="아이디" value={student.username} />
             <InfoRow label="학년" value={`${student.grade}학년`} />
-            <InfoRow label="반" value={`${student.class_no}반`} />
-            <InfoRow label="학번" value={student.school_number.toString()} />
+            <InfoRow label="반" value={`${student.classNo}반`} />
+            <InfoRow label="학번" value={student.schoolNumber.toString()} />
           </>
         )}
       </View>

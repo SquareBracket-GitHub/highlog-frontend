@@ -13,7 +13,7 @@ export default function RegisterScreen() {
   const [grade, setGrade] = useState('');
   const [classNo, setClassNo] = useState('');
   const [schoolNumber, setSchoolNumber] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     if (
@@ -28,29 +28,29 @@ export default function RegisterScreen() {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const gradeNum = parseInt(grade, 10);
       const classNoNum = parseInt(classNo, 10);
       const schoolNumberNum = parseInt(schoolNumber, 10);
 
-      const newStudent = await studentService.create({
+      const session = await studentService.create({
         username: name,
-        login_id: loginId,
+        loginId,
         password,
         grade: gradeNum,
-        class_no: classNoNum,
-        school_number: schoolNumberNum,
+        classNo: classNoNum,
+        schoolNumber: schoolNumberNum,
       });
 
       Alert.alert('성공', '회원가입이 완료되었습니다');
-      setCurrentStudent(newStudent);
-      router.push('/schedules');
+      setCurrentStudent(session.student, session.token);
+      router.replace('/schedules');
     } catch (error) {
       Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
       console.error(error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -75,7 +75,7 @@ export default function RegisterScreen() {
         placeholder="이름을 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 아이디 */}
@@ -86,7 +86,7 @@ export default function RegisterScreen() {
         placeholder="아이디를 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 비밀번호 */}
@@ -98,7 +98,7 @@ export default function RegisterScreen() {
         placeholder="비밀번호를 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 학년 */}
@@ -110,7 +110,7 @@ export default function RegisterScreen() {
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 반 */}
@@ -122,7 +122,7 @@ export default function RegisterScreen() {
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 학번 */}
@@ -134,22 +134,22 @@ export default function RegisterScreen() {
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
-        editable={!loading}
+        editable={!isLoading}
       />
 
       {/* 가입 버튼 */}
       <TouchableOpacity
         onPress={handleRegister}
         style={[CommonStyles.primaryButton, { marginTop: 20, marginBottom: 20 }]}
-        disabled={loading}
+        disabled={isLoading}
       >
         <Text style={CommonStyles.primaryButtonText}>
-          {loading ? '가입 중...' : '가입하기'}
+          {isLoading ? '가입 중...' : '가입하기'}
         </Text>
       </TouchableOpacity>
 
       {/* 로그인 이동 */}
-      <TouchableOpacity onPress={() => router.push('/login')} disabled={loading}>
+      <TouchableOpacity onPress={() => router.push('/login')} disabled={isLoading}>
         <Text style={CommonStyles.secondaryText}>이미 계정이 있으신가요?</Text>
       </TouchableOpacity>
     </ScrollView>

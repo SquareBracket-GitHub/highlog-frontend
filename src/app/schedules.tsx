@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Dimensions, ScrollView, Text, View } from 'react-native';
 
 import BottomNav from '../components/BottomNav';
-import { courseService, enrolmentService } from '../services';
+import { classTimetableService, courseService, enrolmentService } from '../services';
 import { getCurrentStudent } from '../store/auth';
 import { CommonStyles, getSubjectColor } from './styles';
 
@@ -51,10 +51,10 @@ const normalizePeriod = (period: number | string): string => {
 
 export default function ScheduleScreen() {
   const [timetable, setTimetable] = useState<TimetableData>({});
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadSchedule = useCallback(async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const student = getCurrentStudent();
       if (!student) {
@@ -62,32 +62,50 @@ export default function ScheduleScreen() {
         return;
       }
 
-      // 학생의 등록된 과목들 조회
-      const enrolments = await enrolmentService.getByStudent(student.id);
-
-      // 과목 정보 조회 및 시간표 구성
+      const [enrolments, slots] = await Promise.all([
+        enrolmentService.getByStudent(student.id),
+        classTimetableService.getMine(),
+      ]);
+      const selectedCourses = await Promise.all(
+        enrolments.map((enrolment) => courseService.getById(enrolment.courseId))
+      );
       const timetableData: TimetableData = {};
 
-      for (const enrolment of enrolments) {
-        const course = await courseService.getById(enrolment.course_id);
+      if (slots.length > 0) {
+        const selectedByTag = new Map(
+          selectedCourses.map((course) => [course.tag, course])
+        );
 
-        if (course.days && Array.isArray(course.days)) {
-          for (const schedule of course.days) {
-            const day = normalizeDay(schedule.day);
-            const period = normalizePeriod(schedule.period);
+        for (const slot of slots) {
+          const day = normalizeDay(slot.day);
+          const period = normalizePeriod(slot.period);
+          if (!day || !period) continue;
 
-            if (!day || !period) {
-              continue;
+          const selectedCourse = slot.tag ? selectedByTag.get(slot.tag) : undefined;
+          if (!timetableData[day]) timetableData[day] = {};
+          timetableData[day][period] = {
+            title: selectedCourse?.title || slot.label,
+            classroom: selectedCourse?.classroom || '',
+          };
+        }
+      } else {
+        // 반별 틀이 아직 없으면 기존 courses.days 일정을 사용한다.
+        for (const course of selectedCourses) {
+
+          if (course.days && Array.isArray(course.days)) {
+            for (const schedule of course.days) {
+              const day = normalizeDay(schedule.day);
+              const period = normalizePeriod(schedule.period);
+
+              if (!day || !period) continue;
+
+              if (!timetableData[day]) timetableData[day] = {};
+
+              timetableData[day][period] = {
+                title: course.title,
+                classroom: course.classroom,
+              };
             }
-
-            if (!timetableData[day]) {
-              timetableData[day] = {};
-            }
-
-            timetableData[day][period] = {
-              title: course.title,
-              classroom: course.classroom,
-            };
           }
         }
       }
@@ -97,7 +115,7 @@ export default function ScheduleScreen() {
       Alert.alert('오류', '시간표를 불러올 수 없습니다');
       console.error(error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
@@ -107,7 +125,7 @@ export default function ScheduleScreen() {
     }, [loadSchedule])
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={CommonStyles.container}>
         <View style={CommonStyles.headerSection}>

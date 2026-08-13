@@ -1,8 +1,8 @@
 import { ApiClient } from './api';
 
 export interface Enrolment {
-  student_id: number;
-  course_id: number;
+  studentId: number;
+  courseId: number;
 }
 
 export const enrolmentService = {
@@ -24,8 +24,8 @@ export const enrolmentService = {
   // 등록 생성
   async create(studentId: number, courseId: number): Promise<Enrolment> {
     return ApiClient.post<Enrolment>('/enrolments', {
-      student_id: studentId,
-      course_id: courseId,
+      studentId,
+      courseId,
     });
   },
 
@@ -39,20 +39,20 @@ export const enrolmentService = {
     return ApiClient.put<Enrolment>(
       `/enrolments/student/${studentId}/course/${courseId}`,
       {
-        student_id: newStudentId,
-        course_id: newCourseId,
+        studentId: newStudentId,
+        courseId: newCourseId,
       }
     );
   },
 
   // 학생의 모든 등록 삭제
-  async deleteByStudent(studentId: number): Promise<{ student_id: number }> {
-    return ApiClient.delete<{ student_id: number }>(`/enrolments/student/${studentId}`);
+  async deleteByStudent(studentId: number): Promise<{ studentId: number }> {
+    return ApiClient.delete<{ studentId: number }>(`/enrolments/student/${studentId}`);
   },
 
   // 과목의 모든 등록 삭제
-  async deleteByCourse(courseId: number): Promise<{ course_id: number }> {
-    return ApiClient.delete<{ course_id: number }>(`/enrolments/course/${courseId}`);
+  async deleteByCourse(courseId: number): Promise<{ courseId: number }> {
+    return ApiClient.delete<{ courseId: number }>(`/enrolments/course/${courseId}`);
   },
 
   // 특정 등록 삭제
