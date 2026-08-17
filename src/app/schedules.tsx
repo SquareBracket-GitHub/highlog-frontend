@@ -5,7 +5,7 @@ import { Alert, Dimensions, ScrollView, Text, View } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import { classTimetableService, courseService, enrolmentService } from '../services';
 import { getCurrentStudent } from '../store/auth';
-import { CommonStyles, getSubjectColor } from './styles';
+import { CommonStyles, getSubjectColor } from '../styles';
 
 interface TimetableCell {
   title: string;
@@ -81,7 +81,11 @@ export default function ScheduleScreen() {
           const period = normalizePeriod(slot.period);
           if (!day || !period) continue;
 
-          const selectedCourse = slot.tag ? selectedByTag.get(slot.tag) : undefined;
+          const selectedCourse = slot.courseId
+            ? selectedCourses.find((course) => course.id === Number(slot.courseId))
+            : slot.tag
+              ? selectedByTag.get(slot.tag)
+              : undefined;
           if (!timetableData[day]) timetableData[day] = {};
           timetableData[day][period] = {
             title: selectedCourse?.title || slot.label,
@@ -111,9 +115,8 @@ export default function ScheduleScreen() {
       }
 
       setTimetable(timetableData);
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '시간표를 불러올 수 없습니다');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }

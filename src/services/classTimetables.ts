@@ -8,6 +8,7 @@ export interface ClassTimetableSlot {
   period: number;
   label: string;
   tag: string | null;
+  courseId: number | null;
 }
 
 export const classTimetableService = {

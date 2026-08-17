@@ -3,6 +3,7 @@ import { ApiClient } from './api';
 export interface Enrolment {
   studentId: number;
   courseId: number;
+  source: 'fixed' | 'selected';
 }
 
 export const enrolmentService = {

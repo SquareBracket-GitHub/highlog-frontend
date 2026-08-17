@@ -4,7 +4,7 @@ import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'reac
 
 import { studentService } from '../services';
 import { setCurrentStudent } from '../store/auth';
-import { CommonStyles } from './styles';
+import { CommonStyles } from '../styles';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -28,6 +28,11 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (password.length < 8) {
+      Alert.alert('오류', '비밀번호는 8자 이상이어야 합니다');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const gradeNum = parseInt(grade, 10);
@@ -46,9 +51,8 @@ export default function RegisterScreen() {
       Alert.alert('성공', '회원가입이 완료되었습니다');
       setCurrentStudent(session.student, session.token);
       router.replace('/schedules');
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }

@@ -3,9 +3,9 @@ import { useCallback, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import BottomNav from '../components/BottomNav';
-import { courseService, enrolmentService } from '../services';
+import { classTimetableService, courseService, enrolmentService } from '../services';
 import { getCurrentStudent } from '../store/auth';
-import { CommonStyles } from './styles';
+import { CommonStyles } from '../styles';
 
 interface CourseItem {
   id: number;
@@ -40,14 +40,23 @@ export default function CourseSelectScreen() {
   const loadCourses = async () => {
     setIsLoading(true);
     try {
-      const allCourses = await courseService.getAll();
+      const [allCourses, slots] = await Promise.all([
+        courseService.getAll(),
+        classTimetableService.getMine(),
+      ]);
       console.log('loadCourses - allCourses:', allCourses);
 
+      const selectableTags = new Set(
+        slots.flatMap((slot) => (slot.tag ? [slot.tag] : []))
+      );
+
       // courses 배열의 id를 number로 정규화
-      const normalizedCourses = (allCourses as CourseItem[]).map(c => ({
-        ...c,
-        id: Number(c.id)
-      }));
+      const normalizedCourses = (allCourses as CourseItem[])
+        .filter((course) => selectableTags.has(course.tag))
+        .map(c => ({
+          ...c,
+          id: Number(c.id)
+        }));
       console.log('loadCourses - normalizedCourses:', normalizedCourses);
       setCourses(normalizedCourses);
 
@@ -57,7 +66,8 @@ export default function CourseSelectScreen() {
         const enrolments = await enrolmentService.getByStudent(student.id);
         console.log('loadCourses - enrolments from API:', enrolments);
         const seenTags = new Set<string>();
-        const normalized = normalizeCourseIds(enrolments).filter((courseId) => {
+        const selectedEnrolments = enrolments.filter((enrolment) => enrolment.source === 'selected');
+        const normalized = normalizeCourseIds(selectedEnrolments).filter((courseId) => {
           const course = normalizedCourses.find((item) => item.id === courseId);
           if (!course || seenTags.has(course.tag)) return false;
           seenTags.add(course.tag);
@@ -66,9 +76,8 @@ export default function CourseSelectScreen() {
         console.log('loadCourses - normalized:', normalized);
         setSelectedCourses(normalized);
       }
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '과목 목록을 불러올 수 없습니다');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +153,13 @@ export default function CourseSelectScreen() {
       const existingEnrolments = await enrolmentService.getByStudent(student.id);
       console.log('existingEnrolments:', existingEnrolments);
 
-      const existingCourseIds = normalizeCourseIds(existingEnrolments);
+      const existingCourseIds = normalizeCourseIds(
+        existingEnrolments.filter(
+          (enrolment) =>
+            enrolment.source === 'selected' &&
+            courses.some((course) => course.id === Number(enrolment.courseId))
+        )
+      );
       console.log('existingCourseIds:', existingCourseIds);
 
       const toDelete = existingCourseIds.filter((id) => selectedCourses.indexOf(id) === -1);
@@ -188,9 +203,8 @@ export default function CourseSelectScreen() {
 
       Alert.alert('성공', '과목 선택이 저장되었습니다');
       loadCourses();
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '저장 중 오류가 발생했습니다');
-      console.error('handleSave error:', error);
     } finally {
       setIsSaving(false);
       console.log('=== handleSave END ===');

@@ -5,7 +5,7 @@ import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import { studentService } from '../services';
 import { clearCurrentStudent, getCurrentStudent } from '../store/auth';
-import { CommonStyles } from './styles';
+import { CommonStyles } from '../styles';
 
 export default function ProfileScreen() {
   const student = getCurrentStudent();
@@ -46,9 +46,8 @@ export default function ProfileScreen() {
 
       Alert.alert('성공', '정보가 수정되었습니다');
       setIsEditing(false);
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '정보 수정 중 오류가 발생했습니다');
-      console.error(error);
     }
   };
 

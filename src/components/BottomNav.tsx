@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { CommonStyles } from '../app/styles';
+import { CommonStyles } from '../styles';
 
 export default function BottomNav({ active }: { active: string }) {
   return (

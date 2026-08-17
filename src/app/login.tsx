@@ -5,7 +5,7 @@ import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { setCurrentStudent } from '../store/auth';
 import type { Student } from '../services';
 import { ApiClient } from '../services/api';
-import { CommonStyles } from './styles';
+import { CommonStyles } from '../styles';
 
 export default function LoginScreen() {
   // const [username, setUsername] = useState('');
@@ -27,9 +27,8 @@ export default function LoginScreen() {
       );
       setCurrentStudent(session.student, session.token);
       router.replace('/schedules');
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '아이디 또는 비밀번호를 확인하세요');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
