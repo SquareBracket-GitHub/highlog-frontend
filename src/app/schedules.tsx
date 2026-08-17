@@ -10,6 +10,7 @@ import { CommonStyles, getSubjectColor } from '../styles';
 interface TimetableCell {
   title: string;
   classroom: string;
+  color?: string;
 }
 
 interface TimetableData {
@@ -90,6 +91,7 @@ export default function ScheduleScreen() {
           timetableData[day][period] = {
             title: selectedCourse?.title || slot.label,
             classroom: selectedCourse?.classroom || '',
+            color: selectedCourse?.color,
           };
         }
       } else {
@@ -108,6 +110,7 @@ export default function ScheduleScreen() {
               timetableData[day][period] = {
                 title: course.title,
                 classroom: course.classroom,
+                color: course.color,
               };
             }
           }
@@ -224,7 +227,7 @@ function Cell({
 function SubjectCell({ subject }: { subject?: TimetableCell }) {
   const title = subject?.title || '';
   const classroom = subject?.classroom || '';
-  const backgroundColor = getSubjectColor(title);
+  const backgroundColor = subject?.color || getSubjectColor(title);
 
   return (
     <View

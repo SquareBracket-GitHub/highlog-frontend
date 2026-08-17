@@ -7,6 +7,7 @@ export interface Student {
   grade: number;
   classNo: number;
   schoolNumber: number;
+  canManageCourses: boolean;
 }
 
 export interface CreateStudentInput {
@@ -17,6 +18,11 @@ export interface CreateStudentInput {
   classNo: number;
   schoolNumber: number;
 }
+
+export type UpdateStudentInput = Pick<
+  CreateStudentInput,
+  'username' | 'grade' | 'classNo' | 'schoolNumber'
+>;
 
 export interface AuthSession {
   student: Student;
@@ -40,7 +46,7 @@ export const studentService = {
   },
 
   // 학생 정보 수정
-  async update(id: number, data: Partial<CreateStudentInput>): Promise<Student> {
+  async update(id: number, data: UpdateStudentInput): Promise<Student> {
     return ApiClient.put<Student>(`/students/${id}`, data);
   },
 

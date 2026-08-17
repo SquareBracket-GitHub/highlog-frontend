@@ -13,6 +13,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleFindAccount = () => {
+    Alert.alert(
+      '아이디 / 비밀번호 찾기',
+      '현재 지원되지 않는 기능입니다. 자세한 문의는 @t.xyun_으로 부탁드립니다.'
+    );
+  };
+
   const handleLogin = async () => {
     if (!loginId.trim() || !password.trim()) {
       Alert.alert('오류', '아이디와 비밀번호를 입력하세요');
@@ -86,9 +93,14 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       {/* 하단 */}
-      <View style={[CommonStyles.centerAlign, { marginTop: 40 }]}>
+      <TouchableOpacity
+        style={[CommonStyles.centerAlign, { marginTop: 40 }]}
+        onPress={handleFindAccount}
+        disabled={isLoading}
+        accessibilityRole="button"
+      >
         <Text style={CommonStyles.helpText}>아이디 / 비밀번호 찾기</Text>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { studentService } from '../services';
+import { ApiError } from '../services/api';
 import { setCurrentStudent } from '../store/auth';
 import { CommonStyles } from '../styles';
 
@@ -40,8 +41,8 @@ export default function RegisterScreen() {
       const schoolNumberNum = parseInt(schoolNumber, 10);
 
       const session = await studentService.create({
-        username: name,
-        loginId,
+        username: name.trim(),
+        loginId: loginId.trim(),
         password,
         grade: gradeNum,
         classNo: classNoNum,
@@ -51,8 +52,14 @@ export default function RegisterScreen() {
       Alert.alert('성공', '회원가입이 완료되었습니다');
       setCurrentStudent(session.student, session.token);
       router.replace('/schedules');
-    } catch {
-      Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'DUPLICATE_LOGIN_ID') {
+        Alert.alert('가입 불가', '이미 사용 중인 아이디입니다');
+      } else if (error instanceof ApiError && error.code === 'DUPLICATE_STUDENT_NUMBER') {
+        Alert.alert('가입 불가', '같은 학년, 반, 학번으로 가입된 학생이 있습니다');
+      } else {
+        Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
+      }
     } finally {
       setIsLoading(false);
     }

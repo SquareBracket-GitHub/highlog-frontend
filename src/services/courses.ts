@@ -10,14 +10,25 @@ export interface Course {
   title: string;
   classroom: string;
   days: DaySchedule[];
-  tag: string;
+  tag: string | null;
+  grade: number;
+  classNo: number;
+  day: string;
+  period: number;
+  color: string;
+  isClassWide: boolean;
 }
 
 export interface CreateCourseInput {
   title: string;
   classroom: string;
-  days: DaySchedule[];
-  tag: string;
+  tag: string | null;
+  grade: number;
+  classNo: number;
+  day: string;
+  period: number;
+  color: string;
+  isClassWide: boolean;
 }
 
 export const courseService = {
@@ -37,7 +48,7 @@ export const courseService = {
   },
 
   // 과목 정보 수정
-  async update(id: number, data: Partial<CreateCourseInput>): Promise<Course> {
+  async update(id: number, data: CreateCourseInput): Promise<Course> {
     return ApiClient.put<Course>(`/courses/${id}`, data);
   },
 

@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
@@ -11,7 +11,7 @@ interface CourseItem {
   id: number;
   title: string;
   classroom: string;
-  tag: string;
+  tag: string | null;
 }
 
 export default function CourseSelectScreen() {
@@ -52,7 +52,7 @@ export default function CourseSelectScreen() {
 
       // courses 배열의 id를 number로 정규화
       const normalizedCourses = (allCourses as CourseItem[])
-        .filter((course) => selectableTags.has(course.tag))
+        .filter((course) => course.tag !== null && selectableTags.has(course.tag))
         .map(c => ({
           ...c,
           id: Number(c.id)
@@ -69,7 +69,7 @@ export default function CourseSelectScreen() {
         const selectedEnrolments = enrolments.filter((enrolment) => enrolment.source === 'selected');
         const normalized = normalizeCourseIds(selectedEnrolments).filter((courseId) => {
           const course = normalizedCourses.find((item) => item.id === courseId);
-          if (!course || seenTags.has(course.tag)) return false;
+          if (!course?.tag || seenTags.has(course.tag)) return false;
           seenTags.add(course.tag);
           return true;
         });
@@ -217,6 +217,14 @@ export default function CourseSelectScreen() {
       <View style={CommonStyles.headerSection}>
         <Text style={CommonStyles.title}>선택 과목</Text>
         <Text style={CommonStyles.subtitle}>원하는 과목을 선택하세요</Text>
+        {getCurrentStudent()?.canManageCourses ? (
+          <TouchableOpacity
+            style={{ marginTop: 16, alignSelf: 'flex-start' }}
+            onPress={() => router.push('/courseManage')}
+          >
+            <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ 과목 추가</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* 과목 리스트 */}

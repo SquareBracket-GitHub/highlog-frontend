@@ -8,6 +8,17 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string | undefined,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export class ApiClient {
   static async request<T>(
     endpoint: string,
@@ -27,7 +38,18 @@ export class ApiClient {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`API Error: ${response.status} ${response.statusText} - ${text}`);
+      let code: string | undefined;
+      let message = text || response.statusText;
+
+      try {
+        const errorBody = JSON.parse(text);
+        code = errorBody.code;
+        message = errorBody.error || message;
+      } catch {
+        // JSON이 아닌 오류 응답은 원문을 유지합니다.
+      }
+
+      throw new ApiError(response.status, code, message);
     }
 
     const result: ApiResponse<T> = await response.json();
