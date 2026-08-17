@@ -4,6 +4,7 @@ import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'reac
 
 import BottomNav from '../components/BottomNav';
 import { studentService } from '../services';
+import { ApiError } from '../services/api';
 import { clearCurrentStudent, getCurrentStudent, setCurrentStudent } from '../store/auth';
 import { CommonStyles } from '../styles';
 
@@ -15,6 +16,7 @@ export default function ProfileScreen() {
   const [editClassNo, setEditClassNo] = useState(student?.classNo.toString() || '');
   const [editSchoolNumber, setEditSchoolNumber] = useState(student?.schoolNumber.toString() || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -40,8 +42,14 @@ export default function ProfileScreen() {
     const classNoNum = Number(editClassNo);
     const schoolNumberNum = Number(editSchoolNumber);
 
-    if (!username || ![gradeNum, classNoNum, schoolNumberNum].every(Number.isInteger)) {
-      Alert.alert('오류', '이름과 올바른 학년, 반, 학번을 입력하세요');
+    const errors: Record<string, string> = {};
+    if (!username) errors.username = '이름을 입력하세요.';
+    else if (username.length > 10) errors.username = '이름은 10자 이하로 입력하세요.';
+    if (!Number.isInteger(gradeNum) || gradeNum < 1) errors.grade = '학년은 1 이상의 정수여야 합니다.';
+    if (!Number.isInteger(classNoNum) || classNoNum < 1) errors.classNo = '반은 1 이상의 정수여야 합니다.';
+    if (!Number.isInteger(schoolNumberNum) || schoolNumberNum < 1) errors.schoolNumber = '학번은 1 이상의 정수여야 합니다.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -58,8 +66,18 @@ export default function ProfileScreen() {
 
       Alert.alert('성공', '정보가 수정되었습니다');
       setIsEditing(false);
-    } catch {
-      Alert.alert('오류', '정보 수정 중 오류가 발생했습니다');
+    } catch (error) {
+      if (error instanceof ApiError && error.issues.length > 0) {
+        const serverErrors: Record<string, string> = {};
+        for (const issue of error.issues) {
+          serverErrors[String(issue.path?.at(-1) || 'form')] = issue.message || '입력값을 확인하세요.';
+        }
+        setFieldErrors(serverErrors);
+      } else if (error instanceof ApiError && error.code === 'DUPLICATE_STUDENT_NUMBER') {
+        setFieldErrors({ schoolNumber: '같은 학년, 반, 학번으로 등록된 학생이 있습니다.' });
+      } else {
+        Alert.alert('오류', error instanceof Error ? error.message : '정보 수정 중 오류가 발생했습니다');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -118,10 +136,11 @@ export default function ProfileScreen() {
         {/* 정보 영역 */}
         {isEditing ? (
           <>
-            <EditField label="이름" value={editUsername} onChangeText={setEditUsername} />
-            <EditField label="학년" value={editGrade} onChangeText={setEditGrade} numeric />
-            <EditField label="반" value={editClassNo} onChangeText={setEditClassNo} numeric />
-            <EditField label="학번" value={editSchoolNumber} onChangeText={setEditSchoolNumber} numeric />
+            <EditField label="이름" value={editUsername} onChangeText={setEditUsername} error={fieldErrors.username} />
+            <EditField label="학년" value={editGrade} onChangeText={setEditGrade} numeric error={fieldErrors.grade} />
+            <EditField label="반" value={editClassNo} onChangeText={setEditClassNo} numeric error={fieldErrors.classNo} />
+            <EditField label="학번" value={editSchoolNumber} onChangeText={setEditSchoolNumber} numeric error={fieldErrors.schoolNumber} />
+            {fieldErrors.form ? <Text style={{ color: '#DC2626' }}>{fieldErrors.form}</Text> : null}
           </>
         ) : (
           <>
@@ -192,11 +211,13 @@ function EditField({
   value,
   onChangeText,
   numeric = false,
+  error,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   numeric?: boolean;
+  error?: string;
 }) {
   return (
     <View style={{ marginBottom: 16 }}>
@@ -204,9 +225,11 @@ function EditField({
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        style={CommonStyles.input}
+        style={[CommonStyles.input, error ? { borderColor: '#DC2626' } : null]}
         keyboardType={numeric ? 'number-pad' : 'default'}
+        accessibilityHint={error}
       />
+      {error ? <Text style={{ color: '#DC2626', fontSize: 12, marginTop: 6 }}>{error}</Text> : null}
     </View>
   );
 }

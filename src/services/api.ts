@@ -12,7 +12,8 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string | undefined,
-    message: string
+    message: string,
+    public readonly issues: { path?: PropertyKey[]; message?: string }[] = []
   ) {
     super(message);
     this.name = 'ApiError';
@@ -40,16 +41,22 @@ export class ApiClient {
       const text = await response.text();
       let code: string | undefined;
       let message = text || response.statusText;
+      let issues: { path?: PropertyKey[]; message?: string }[] = [];
 
       try {
         const errorBody = JSON.parse(text);
         code = errorBody.code;
-        message = errorBody.error || message;
+        if (Array.isArray(errorBody.error)) {
+          issues = errorBody.error;
+          message = '입력값을 확인하세요.';
+        } else {
+          message = errorBody.error || message;
+        }
       } catch {
         // JSON이 아닌 오류 응답은 원문을 유지합니다.
       }
 
-      throw new ApiError(response.status, code, message);
+      throw new ApiError(response.status, code, message, issues);
     }
 
     const result: ApiResponse<T> = await response.json();

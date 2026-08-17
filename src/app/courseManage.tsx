@@ -9,6 +9,7 @@ import { CommonStyles } from '../styles';
 const DAYS = ['월요일', '화요일', '수요일', '목요일', '금요일'];
 const PERIODS = Array.from({ length: 12 }, (_, index) => index + 1);
 const COLORS = ['#BBF7D0', '#BFDBFE', '#FDE68A', '#FCD34D', '#E9D5FF', '#FBCFE8'];
+type CourseSchedule = { day: string; period: number };
 
 export default function CourseManageScreen() {
   const student = getCurrentStudent();
@@ -17,11 +18,29 @@ export default function CourseManageScreen() {
   const [classNo, setClassNo] = useState(student?.classNo.toString() || '');
   const [tag, setTag] = useState('');
   const [classroom, setClassroom] = useState('');
-  const [day, setDay] = useState(DAYS[0]);
-  const [period, setPeriod] = useState(1);
+  const [schedules, setSchedules] = useState<CourseSchedule[]>([{ day: DAYS[0], period: 1 }]);
   const [color, setColor] = useState(COLORS[0]);
   const [isClassWide, setIsClassWide] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const updateSchedule = (index: number, patch: Partial<CourseSchedule>) => {
+    setSchedules((current) => current.map((schedule, scheduleIndex) =>
+      scheduleIndex === index ? { ...schedule, ...patch } : schedule
+    ));
+  };
+
+  const addSchedule = () => {
+    const available = DAYS.flatMap((scheduleDay) =>
+      PERIODS.map((schedulePeriod) => ({ day: scheduleDay, period: schedulePeriod }))
+    ).find((candidate) => !schedules.some(
+      (schedule) => schedule.day === candidate.day && schedule.period === candidate.period
+    ));
+    if (!available) {
+      Alert.alert('일정 추가', '추가할 수 있는 시간대가 없습니다.');
+      return;
+    }
+    setSchedules((current) => [...current, available]);
+  };
 
   if (!student?.canManageCourses) {
     return (
@@ -45,6 +64,11 @@ export default function CourseManageScreen() {
       Alert.alert('입력 확인', '선택 과목에는 태그가 필요합니다.');
       return;
     }
+    const scheduleKeys = schedules.map(({ day, period }) => `${day}-${period}`);
+    if (new Set(scheduleKeys).size !== scheduleKeys.length) {
+      Alert.alert('입력 확인', '같은 요일과 교시가 중복되어 있습니다.');
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -54,8 +78,7 @@ export default function CourseManageScreen() {
         classNo: classNumber,
         tag: isClassWide ? null : tag.trim(),
         classroom: classroom.trim(),
-        day,
-        period,
+        schedules,
         color,
         isClassWide,
       });
@@ -90,17 +113,55 @@ export default function CourseManageScreen() {
         <Switch value={isClassWide} onValueChange={setIsClassWide} />
       </View>
 
+      {isClassWide ? (
+        <View style={{ backgroundColor: '#EEF2FF', borderRadius: 12, padding: 14, marginBottom: 20 }}>
+          <Text style={{ color: '#3730A3', fontWeight: '700' }}>
+            대상: {grade || '?'}학년 {classNo || '?'}반 전체
+          </Text>
+          <Text style={{ color: '#6366F1', fontSize: 12, marginTop: 4 }}>
+            이 반에 등록된 모든 학생에게 자동으로 추가됩니다.
+          </Text>
+        </View>
+      ) : null}
+
       {!isClassWide ? (
         <Field label="선택 그룹 태그" value={tag} onChangeText={setTag} placeholder="예: 과학 선택" />
       ) : null}
 
-      <OptionGroup label="요일" options={DAYS} selected={day} onSelect={setDay} />
-      <OptionGroup
-        label="교시"
-        options={PERIODS.map(String)}
-        selected={String(period)}
-        onSelect={(value) => setPeriod(Number(value))}
-      />
+      <Text style={[CommonStyles.inputLabel, { fontWeight: '700' }]}>수업 일정</Text>
+      {schedules.map((schedule, index) => (
+        <View
+          key={`schedule-${index}`}
+          style={{ backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12 }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontWeight: '700' }}>일정 {index + 1}</Text>
+            {schedules.length > 1 ? (
+              <TouchableOpacity onPress={() => setSchedules((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                <Text style={{ color: '#DC2626' }}>삭제</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <OptionGroup
+            label="요일"
+            options={DAYS}
+            selected={schedule.day}
+            onSelect={(value) => updateSchedule(index, { day: value })}
+          />
+          <OptionGroup
+            label="교시"
+            options={PERIODS.map(String)}
+            selected={String(schedule.period)}
+            onSelect={(value) => updateSchedule(index, { period: Number(value) })}
+          />
+        </View>
+      ))}
+      <TouchableOpacity
+        onPress={addSchedule}
+        style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: '#4F46E5', borderRadius: 12, padding: 14, marginBottom: 24 }}
+      >
+        <Text style={{ color: '#4F46E5', fontWeight: '700', textAlign: 'center' }}>+ 일정 추가</Text>
+      </TouchableOpacity>
 
       <Text style={CommonStyles.inputLabel}>시간표 색상</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 28 }}>

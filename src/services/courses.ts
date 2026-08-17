@@ -25,8 +25,7 @@ export interface CreateCourseInput {
   tag: string | null;
   grade: number;
   classNo: number;
-  day: string;
-  period: number;
+  schedules: { day: string; period: number }[];
   color: string;
   isClassWide: boolean;
 }
