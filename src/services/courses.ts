@@ -12,7 +12,7 @@ export interface Course {
   days: DaySchedule[];
   tag: string | null;
   grade: number;
-  classNo: number;
+  classNo: number | null;
   day: string;
   period: number;
   color: string;
@@ -24,7 +24,7 @@ export interface CreateCourseInput {
   classroom: string;
   tag: string | null;
   grade: number;
-  classNo: number;
+  classNo: number | null;
   schedules: { day: string; period: number }[];
   color: string;
   isClassWide: boolean;

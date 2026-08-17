@@ -56,8 +56,12 @@ export default function CourseManageScreen() {
   const handleSave = async () => {
     const gradeNumber = Number(grade);
     const classNumber = Number(classNo);
-    if (!title.trim() || !classroom.trim() || !Number.isInteger(gradeNumber) || !Number.isInteger(classNumber)) {
-      Alert.alert('입력 확인', '과목명, 학년, 반, 수업 장소를 모두 입력하세요.');
+    if (!title.trim() || !classroom.trim() || !Number.isInteger(gradeNumber) || gradeNumber < 1) {
+      Alert.alert('입력 확인', '과목명, 학년, 수업 장소를 모두 올바르게 입력하세요.');
+      return;
+    }
+    if (isClassWide && (!Number.isInteger(classNumber) || classNumber < 1)) {
+      Alert.alert('입력 확인', '반 전체 공통 과목에는 대상 반이 필요합니다.');
       return;
     }
     if (!isClassWide && !tag.trim()) {
@@ -75,7 +79,7 @@ export default function CourseManageScreen() {
       await courseService.create({
         title: title.trim(),
         grade: gradeNumber,
-        classNo: classNumber,
+        classNo: isClassWide ? classNumber : null,
         tag: isClassWide ? null : tag.trim(),
         classroom: classroom.trim(),
         schedules,
@@ -102,7 +106,14 @@ export default function CourseManageScreen() {
       <Text style={[CommonStyles.title, { marginBottom: 28 }]}>과목 추가</Text>
       <Field label="과목명" value={title} onChangeText={setTitle} placeholder="예: 물리학" />
       <Field label="학년" value={grade} onChangeText={setGrade} numeric />
-      <Field label="반" value={classNo} onChangeText={setClassNo} numeric />
+      {isClassWide ? (
+        <Field label="대상 반" value={classNo} onChangeText={setClassNo} numeric />
+      ) : (
+        <View style={{ backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, marginBottom: 20 }}>
+          <Text style={{ color: '#444', fontWeight: '600' }}>선택과목은 학년 전체 대상입니다.</Text>
+          <Text style={{ color: '#777', fontSize: 12, marginTop: 4 }}>반을 지정하지 않고 같은 학년 학생에게 표시됩니다.</Text>
+        </View>
+      )}
       <Field label="수업 장소" value={classroom} onChangeText={setClassroom} placeholder="예: 과학실" />
 
       <View style={rowStyle}>
