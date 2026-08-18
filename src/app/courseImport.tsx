@@ -8,6 +8,7 @@ import { CommonStyles } from '../styles';
 
 type PreviewRow = { line: number; data?: CreateCourseInput; error?: string };
 const HEADER = '과목명,학년,반,태그,수업장소,일정,색상,반전체공통';
+const DAYS = new Set(['월요일', '화요일', '수요일', '목요일', '금요일']);
 
 function parseCsv(value: string): PreviewRow[] {
   return value.trim().split(/\r?\n/).slice(1).filter(Boolean).map((line, index) => {
@@ -22,7 +23,9 @@ function parseCsv(value: string): PreviewRow[] {
     if (!title || !classroom || !Number.isInteger(grade) || !/^#[0-9A-Fa-f]{6}$/.test(color)) return { line: index + 2, error: '필수값 또는 색상 형식이 잘못됐습니다.' };
     if (isClassWide && (!classNo || tagText)) return { line: index + 2, error: '반 공통 과목은 반이 필요하고 태그는 비워야 합니다.' };
     if (!isClassWide && (!tagText || classNo !== null)) return { line: index + 2, error: '선택과목은 태그가 필요하고 반은 비워야 합니다.' };
-    if (!schedules.length || schedules.some((item) => !item.day || !Number.isInteger(item.period))) return { line: index + 2, error: '일정은 요일:교시 형식이어야 합니다.' };
+    if (!schedules.length || schedules.some((item) => !DAYS.has(item.day) || !Number.isInteger(item.period) || item.period < 1 || item.period > 7)) {
+      return { line: index + 2, error: '일정은 월~금요일:1~7교시 형식이어야 합니다.' };
+    }
     return { line: index + 2, data: { title, grade, classNo, tag: tagText || null, classroom, schedules, color, isClassWide } };
   });
 }
@@ -48,7 +51,7 @@ export default function CourseImportScreen() {
   return (
     <ScrollView style={CommonStyles.scrollContainer} contentContainerStyle={{ padding: 24, paddingTop: 60 }} automaticallyAdjustKeyboardInsets>
       <Text style={CommonStyles.title}>CSV 일괄 등록</Text>
-      <Text style={{ color: '#666', marginVertical: 12 }}>첫 줄은 헤더입니다. 일정은 월요일:2|수요일:3 형식으로 입력하세요.</Text>
+      <Text style={{ color: '#666', marginVertical: 12 }}>첫 줄은 헤더입니다. 일정은 월요일:2|수요일:3 형식이며 교시는 1~7만 가능합니다.</Text>
       <TextInput value={csv} onChangeText={setCsv} multiline style={[CommonStyles.input, { minHeight: 180, textAlignVertical: 'top' }]} />
       <Text style={{ fontWeight: '700', marginTop: 24, marginBottom: 10 }}>미리보기 ({valid.length}개)</Text>
       {preview.map((row) => (

@@ -7,7 +7,7 @@ import { getCurrentStudent } from '../store/auth';
 import { CommonStyles } from '../styles';
 
 const DAYS = ['월요일', '화요일', '수요일', '목요일', '금요일'];
-const PERIODS = Array.from({ length: 12 }, (_, index) => index + 1);
+const PERIODS = Array.from({ length: 7 }, (_, index) => index + 1);
 const COLORS = ['#BBF7D0', '#BFDBFE', '#FDE68A', '#FCD34D', '#E9D5FF', '#FBCFE8'];
 type CourseSchedule = { day: string; period: number };
 
