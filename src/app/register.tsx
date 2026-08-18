@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { studentService } from '../services';
@@ -15,6 +15,11 @@ export default function RegisterScreen() {
   const [classNo, setClassNo] = useState('');
   const [schoolNumber, setSchoolNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const loginIdRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const gradeRef = useRef<TextInput>(null);
+  const classNoRef = useRef<TextInput>(null);
+  const schoolNumberRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
     if (
@@ -72,6 +77,8 @@ export default function RegisterScreen() {
         paddingHorizontal: 24,
         paddingVertical: 60,
       }}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       {/* 제목 */}
       <View style={CommonStyles.registerTitleContainer}>
@@ -87,22 +94,28 @@ export default function RegisterScreen() {
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         editable={!isLoading}
+        returnKeyType="next"
+        onSubmitEditing={() => loginIdRef.current?.focus()}
       />
 
       {/* 아이디 */}
       <InputLabel label="아이디" />
       <TextInput
+        ref={loginIdRef}
         value={loginId}
         onChangeText={setLoginId}
         placeholder="아이디를 입력하세요"
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         editable={!isLoading}
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
       />
 
       {/* 비밀번호 */}
       <InputLabel label="비밀번호" />
       <TextInput
+        ref={passwordRef}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -110,11 +123,14 @@ export default function RegisterScreen() {
         placeholderTextColor="#AAA"
         style={CommonStyles.inputWithMargin}
         editable={!isLoading}
+        returnKeyType="next"
+        onSubmitEditing={() => gradeRef.current?.focus()}
       />
 
       {/* 학년 */}
       <InputLabel label="학년" />
       <TextInput
+        ref={gradeRef}
         value={grade}
         onChangeText={setGrade}
         placeholder="예: 1"
@@ -122,11 +138,14 @@ export default function RegisterScreen() {
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
         editable={!isLoading}
+        returnKeyType="next"
+        onSubmitEditing={() => classNoRef.current?.focus()}
       />
 
       {/* 반 */}
       <InputLabel label="반" />
       <TextInput
+        ref={classNoRef}
         value={classNo}
         onChangeText={setClassNo}
         placeholder="예: 3"
@@ -134,11 +153,14 @@ export default function RegisterScreen() {
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
         editable={!isLoading}
+        returnKeyType="next"
+        onSubmitEditing={() => schoolNumberRef.current?.focus()}
       />
 
       {/* 학번 */}
       <InputLabel label="학번" />
       <TextInput
+        ref={schoolNumberRef}
         value={schoolNumber}
         onChangeText={setSchoolNumber}
         placeholder="예: 1"
@@ -146,6 +168,8 @@ export default function RegisterScreen() {
         style={CommonStyles.inputWithMargin}
         keyboardType="numeric"
         editable={!isLoading}
+        returnKeyType="done"
+        onSubmitEditing={() => void handleRegister()}
       />
 
       {/* 가입 버튼 */}

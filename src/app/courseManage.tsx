@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { courseService } from '../services';
@@ -12,6 +12,8 @@ const COLORS = ['#BBF7D0', '#BFDBFE', '#FDE68A', '#FCD34D', '#E9D5FF', '#FBCFE8'
 type CourseSchedule = { day: string; period: number };
 
 export default function CourseManageScreen() {
+  const params = useLocalSearchParams<{ id?: string }>();
+  const courseId = params.id ? Number(params.id) : undefined;
   const student = getCurrentStudent();
   const [title, setTitle] = useState('');
   const [grade, setGrade] = useState(student?.grade.toString() || '');
@@ -22,6 +24,34 @@ export default function CourseManageScreen() {
   const [color, setColor] = useState(COLORS[0]);
   const [isClassWide, setIsClassWide] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [conflictMessage, setConflictMessage] = useState('');
+  const [impactMessage, setImpactMessage] = useState('');
+
+  useEffect(() => {
+    if (!courseId) return;
+    Promise.all([courseService.getById(courseId), courseService.getImpact(courseId)]).then(([course, impact]) => {
+      setTitle(course.title); setGrade(String(course.grade)); setClassNo(course.classNo ? String(course.classNo) : '');
+      setTag(course.tag || ''); setClassroom(course.classroom); setSchedules(course.days.map(({ day, period }) => ({ day, period: Number(period) })));
+      setColor(course.color); setIsClassWide(course.isClassWide);
+      setImpactMessage(`현재 수강 학생 ${impact.enrolledStudents}명, 시간표 슬롯 ${impact.timetableSlots}개에 영향을 줍니다.`);
+    }).catch(() => Alert.alert('오류', '수정할 과목 정보를 불러오지 못했습니다.'));
+  }, [courseId]);
+
+  useEffect(() => {
+    const gradeNumber = Number(grade);
+    const classNumber = Number(classNo);
+    if (!title.trim() || !classroom.trim() || !Number.isInteger(gradeNumber) || (!isClassWide && !tag.trim())) return;
+    const timer = setTimeout(() => {
+      courseService.checkConflicts({
+        title: title.trim(), classroom: classroom.trim(), tag: isClassWide ? null : tag.trim(),
+        grade: gradeNumber, classNo: isClassWide ? classNumber : null, schedules, color, isClassWide,
+      }, courseId).then((result) => {
+        const slots = result.conflicts.map((item) => `${item.day} ${item.period}교시`).join(', ');
+        setConflictMessage(result.tagError || (slots ? `시간 충돌: ${slots}` : ''));
+      }).catch(() => setConflictMessage('충돌 여부를 확인하지 못했습니다.'));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [classNo, classroom, color, courseId, grade, isClassWide, schedules, tag, title]);
 
   const updateSchedule = (index: number, patch: Partial<CourseSchedule>) => {
     setSchedules((current) => current.map((schedule, scheduleIndex) =>
@@ -73,10 +103,14 @@ export default function CourseManageScreen() {
       Alert.alert('입력 확인', '같은 요일과 교시가 중복되어 있습니다.');
       return;
     }
+    if (conflictMessage) {
+      Alert.alert('시간표 확인', conflictMessage);
+      return;
+    }
 
     setIsSaving(true);
     try {
-      await courseService.create({
+      const payload = {
         title: title.trim(),
         grade: gradeNumber,
         classNo: isClassWide ? classNumber : null,
@@ -85,7 +119,9 @@ export default function CourseManageScreen() {
         schedules,
         color,
         isClassWide,
-      });
+      };
+      if (courseId) await courseService.update(courseId, payload);
+      else await courseService.create(payload);
       Alert.alert('완료', isClassWide
         ? '반 전체 학생에게 공통 과목이 등록되었습니다.'
         : '선택 과목이 추가되었습니다.');
@@ -102,8 +138,11 @@ export default function CourseManageScreen() {
       style={CommonStyles.scrollContainer}
       contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 60 }}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
-      <Text style={[CommonStyles.title, { marginBottom: 28 }]}>과목 추가</Text>
+      <Text style={[CommonStyles.title, { marginBottom: 12 }]}>{courseId ? '과목 수정' : '과목 추가'}</Text>
+      {impactMessage ? <Text style={{ color: '#92400E', marginBottom: 16 }}>{impactMessage}</Text> : null}
+      {conflictMessage ? <Text style={{ color: '#DC2626', marginBottom: 16 }}>{conflictMessage}</Text> : null}
       <Field label="과목명" value={title} onChangeText={setTitle} placeholder="예: 물리학" />
       <Field label="학년" value={grade} onChangeText={setGrade} numeric />
       {isClassWide ? (
@@ -191,7 +230,7 @@ export default function CourseManageScreen() {
       </View>
 
       <TouchableOpacity style={CommonStyles.primaryButton} onPress={handleSave} disabled={isSaving}>
-        <Text style={CommonStyles.primaryButtonText}>{isSaving ? '저장 중...' : '과목 저장'}</Text>
+        <Text style={CommonStyles.primaryButtonText}>{isSaving ? '저장 중...' : courseId ? '수정 저장' : '과목 저장'}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => router.back()} disabled={isSaving}>
         <Text style={CommonStyles.secondaryText}>취소</Text>

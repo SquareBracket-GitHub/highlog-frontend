@@ -17,6 +17,7 @@ export interface Course {
   period: number;
   color: string;
   isClassWide: boolean;
+  createdByStudentId: number | null;
 }
 
 export interface CreateCourseInput {
@@ -39,6 +40,18 @@ export const courseService = {
   // 특정 과목 조회
   async getById(id: number): Promise<Course> {
     return ApiClient.get<Course>(`/courses/${id}`);
+  },
+
+  async getMine(): Promise<Course[]> {
+    return ApiClient.get<Course[]>('/courses/mine');
+  },
+
+  async getImpact(id: number): Promise<{ enrolledStudents: number; timetableSlots: number }> {
+    return ApiClient.get(`/courses/${id}/impact`);
+  },
+
+  async checkConflicts(data: CreateCourseInput, excludeCourseId?: number): Promise<{ conflicts: { day: string; period: number }[]; tagError?: string }> {
+    return ApiClient.post('/courses/conflicts', { ...data, excludeCourseId });
   },
 
   // 과목 생성

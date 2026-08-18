@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import BottomNav from '../components/BottomNav';
 import { classTimetableService, courseService, enrolmentService } from '../services';
 import { getCurrentStudent } from '../store/auth';
 import { CommonStyles } from '../styles';
+import { getErrorMessage } from '../services/api';
 
 interface CourseItem {
   id: number;
@@ -19,12 +20,10 @@ export default function CourseSelectScreen() {
   const [selectedCourses, setSelectedCourses] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadCourses();
-    }, [])
-  );
+  const [savedCourses, setSavedCourses] = useState<number[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [feedback, setFeedback] = useState('');
 
   const normalizeCourseIds = (enrolments: { courseId: number | string }[]) => {
     const ids: number[] = [];
@@ -37,8 +36,9 @@ export default function CourseSelectScreen() {
     return Array.from(new Set(ids));
   };
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     setIsLoading(true);
+    setErrorMessage('');
     try {
       const [allCourses, slots] = await Promise.all([
         courseService.getAll(),
@@ -75,13 +75,35 @@ export default function CourseSelectScreen() {
         });
         console.log('loadCourses - normalized:', normalized);
         setSelectedCourses(normalized);
+        setSavedCourses(normalized);
       }
-    } catch {
-      Alert.alert('오류', '과목 목록을 불러올 수 없습니다');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { void loadCourses(); }, [loadCourses]));
+
+  const isDirty = [...selectedCourses].sort().join(',') !== [...savedCourses].sort().join(',');
+  const confirmNavigation = useCallback((navigate: () => void) => {
+    if (!isDirty) return navigate();
+    Alert.alert('저장하지 않은 변경사항', '변경사항을 버리고 이동하시겠습니까?', [
+      { text: '계속 편집', style: 'cancel' },
+      { text: '버리고 이동', style: 'destructive', onPress: navigate },
+    ]);
+  }, [isDirty]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!isDirty) return false;
+      confirmNavigation(() => router.back());
+      return true;
+    });
+    return () => subscription.remove();
+  }, [confirmNavigation, isDirty]);
 
   const toggleCourse = (courseId: number) => {
     const id = Number(courseId);
@@ -145,6 +167,7 @@ export default function CourseSelectScreen() {
     }
 
     setIsSaving(true);
+    setFeedback('');
     try {
       console.log('=== handleSave START ===');
       console.log('selectedCourses from state:', selectedCourses);
@@ -201,10 +224,10 @@ export default function CourseSelectScreen() {
         console.warn('toAdd is empty - no create operations');
       }
 
-      Alert.alert('성공', '과목 선택이 저장되었습니다');
-      loadCourses();
-    } catch {
-      Alert.alert('오류', '저장 중 오류가 발생했습니다');
+      setSavedCourses([...selectedCourses]);
+      setFeedback('과목 선택이 저장되었습니다.');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSaving(false);
       console.log('=== handleSave END ===');
@@ -220,26 +243,34 @@ export default function CourseSelectScreen() {
         {getCurrentStudent()?.canManageCourses ? (
           <TouchableOpacity
             style={{ marginTop: 16, alignSelf: 'flex-start' }}
-            onPress={() => router.push('/courseManage')}
+            onPress={() => confirmNavigation(() => router.push('/courseAdmin'))}
           >
-            <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ 과목 추가</Text>
+            <Text style={{ color: '#4F46E5', fontWeight: '700' }}>내 과목 관리</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
       {/* 과목 리스트 */}
       <ScrollView
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); void loadCourses(); }} />}
         contentContainerStyle={{
           paddingHorizontal: 24,
           paddingBottom: 24,
         }}
       >
-        {isLoading ? (
-          <Text style={{ textAlign: 'center', marginTop: 20 }}>
-            과목 목록을 불러오는 중...
-          </Text>
+        {feedback ? <Text style={{ color: '#047857', textAlign: 'center', marginBottom: 12 }}>{feedback}</Text> : null}
+        {errorMessage ? (
+          <View style={{ alignItems: 'center', padding: 24 }}>
+            <Text style={{ color: '#B91C1C', textAlign: 'center', marginBottom: 12 }}>{errorMessage}</Text>
+            <TouchableOpacity onPress={() => void loadCourses()}><Text style={{ color: '#4F46E5', fontWeight: '700' }}>다시 시도</Text></TouchableOpacity>
+          </View>
+        ) : isLoading ? (
+          <ActivityIndicator size="large" style={{ marginTop: 20 }} />
         ) : (
           <>
+            {courses.length === 0 ? (
+              <Text style={{ textAlign: 'center', color: '#777', marginVertical: 40 }}>현재 선택할 수 있는 과목이 없습니다.</Text>
+            ) : null}
             {Object.entries(taggedCourses).map(([tag, items]) => (
               <View key={tag}>
                 {tag !== '__NO_TAG__' && (
@@ -264,6 +295,10 @@ export default function CourseSelectScreen() {
                       key={String(course.id)}
                       onPress={() => toggleCourse(course.id)}
                       disabled={isSaving}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={`${course.title}, ${course.classroom || '장소 미정'}`}
+                      accessibilityHint="같은 분류에서 이 과목을 선택합니다"
+                      accessibilityState={{ checked: selected, disabled: isSaving }}
                       style={[
                         selected
                           ? CommonStyles.courseItemSelected
@@ -278,7 +313,7 @@ export default function CourseSelectScreen() {
                             : CommonStyles.courseTextUnselected,
                         ]}
                       >
-                        {course.title}
+                        {selected ? '✓ ' : '○ '}{course.title}
                       </Text>
 
                       <Text
@@ -312,7 +347,7 @@ export default function CourseSelectScreen() {
       </ScrollView>
 
       {/* 하단 네비 */}
-      <BottomNav active="course" />
+      <BottomNav active="course" beforeNavigate={confirmNavigation} />
     </View>
   );
 }

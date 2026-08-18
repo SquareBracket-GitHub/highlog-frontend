@@ -333,6 +333,32 @@ export const CommonStyles = StyleSheet.create({
     color: '#555',
   },
 
+  subjectTypePattern: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+
+  subjectTypePatternSelected: {
+    borderStyle: 'dashed',
+  },
+
+  subjectTypePatternCommon: {
+    borderStyle: 'solid',
+    borderWidth: 2,
+  },
+
+  subjectTypeText: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '800',
+  },
+
   subjectCellText: {
     fontSize: 12,
     textAlign: 'center',

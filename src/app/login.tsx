@@ -1,17 +1,20 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { setCurrentStudent } from '../store/auth';
 import type { Student } from '../services';
 import { ApiClient } from '../services/api';
 import { CommonStyles } from '../styles';
+import { getErrorMessage } from '../services/api';
 
 export default function LoginScreen() {
   // const [username, setUsername] = useState('');
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const passwordRef = useRef<TextInput>(null);
 
   const handleFindAccount = () => {
     Alert.alert(
@@ -27,6 +30,7 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
+    setErrorMessage('');
     try {
       const session = await ApiClient.post<{ student: Student; token: string }>(
         '/auth/login',
@@ -34,15 +38,20 @@ export default function LoginScreen() {
       );
       setCurrentStudent(session.student, session.token);
       router.replace('/schedules');
-    } catch {
-      Alert.alert('오류', '아이디 또는 비밀번호를 확인하세요');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <View style={CommonStyles.loginMainContainer}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView
+      contentContainerStyle={[CommonStyles.loginMainContainer, { flexGrow: 1 }]}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+    >
       {/* 로고 */}
       <View style={CommonStyles.logoContainer}>
         <Text style={CommonStyles.logo}>HIGHLOG</Text>
@@ -59,6 +68,8 @@ export default function LoginScreen() {
           placeholderTextColor="#AAA"
           style={CommonStyles.input}
           editable={!isLoading}
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
       </View>
 
@@ -66,6 +77,7 @@ export default function LoginScreen() {
       <View style={CommonStyles.inputSectionLarge}>
         <Text style={CommonStyles.inputLabel}>비밀번호</Text>
         <TextInput
+          ref={passwordRef}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -73,6 +85,8 @@ export default function LoginScreen() {
           placeholderTextColor="#AAA"
           style={CommonStyles.input}
           editable={!isLoading}
+          returnKeyType="done"
+          onSubmitEditing={() => void handleLogin()}
         />
       </View>
 
@@ -101,6 +115,8 @@ export default function LoginScreen() {
       >
         <Text style={CommonStyles.helpText}>아이디 / 비밀번호 찾기</Text>
       </TouchableOpacity>
-    </View>
+      {errorMessage ? <Text style={{ color: '#B91C1C', textAlign: 'center', marginBottom: 12 }}>{errorMessage}</Text> : null}
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

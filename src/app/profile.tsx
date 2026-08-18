@@ -107,7 +107,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* 프로필 카드 */}
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <View style={CommonStyles.profileCard}>
         {/* 프로필 */}
         <View style={CommonStyles.profileSection}>

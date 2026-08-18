@@ -1,4 +1,6 @@
-import { getAuthToken } from '../store/auth';
+import { router } from 'expo-router';
+
+import { clearCurrentStudent, getAuthToken } from '../store/auth';
 
 // API 기본 설정
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -20,6 +22,14 @@ export class ApiError extends Error {
   }
 }
 
+export function getErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) return '알 수 없는 오류가 발생했습니다.';
+  if (error.code === 'NETWORK_ERROR') return '네트워크 연결을 확인한 후 다시 시도하세요.';
+  if (error.code === 'TIMEOUT') return '요청 시간이 초과되었습니다. 다시 시도하세요.';
+  if (error.status >= 500) return '서버에 문제가 발생했습니다. 잠시 후 다시 시도하세요.';
+  return error.message;
+}
+
 export class ApiClient {
   static async request<T>(
     endpoint: string,
@@ -28,14 +38,31 @@ export class ApiClient {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = getAuthToken();
     
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
-      ...options,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...options.headers,
+        },
+      });
+    } catch (error) {
+      const timedOut = error instanceof Error && error.name === 'AbortError';
+      throw new ApiError(0, timedOut ? 'TIMEOUT' : 'NETWORK_ERROR', timedOut ? 'Request timed out' : 'Network request failed');
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (response.status === 401 && token) {
+      clearCurrentStudent();
+      router.replace('/login');
+      throw new ApiError(401, 'SESSION_EXPIRED', '로그인이 만료되었습니다. 다시 로그인하세요.');
+    }
 
     if (!response.ok) {
       const text = await response.text();
