@@ -8,6 +8,7 @@ export interface Student {
   classNo: number;
   schoolNumber: number;
   canManageCourses: boolean;
+  isAdmin: boolean;
 }
 
 export interface CreateStudentInput {
@@ -17,6 +18,12 @@ export interface CreateStudentInput {
   grade: number;
   classNo: number;
   schoolNumber: number;
+  agreements: {
+    serviceTerms: true;
+    privacyPolicy: true;
+    anonymousBoardNotice: true;
+    ageOrGuardianConfirmed: true;
+  };
 }
 
 export type UpdateStudentInput = Pick<

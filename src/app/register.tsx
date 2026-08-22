@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { studentService } from '../services';
 import { ApiError } from '../services/api';
@@ -15,6 +15,12 @@ export default function RegisterScreen() {
   const [classNo, setClassNo] = useState('');
   const [schoolNumber, setSchoolNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [agreements, setAgreements] = useState({
+    serviceTerms: false,
+    privacyPolicy: false,
+    anonymousBoardNotice: false,
+    ageOrGuardianConfirmed: false,
+  });
   const loginIdRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const gradeRef = useRef<TextInput>(null);
@@ -38,6 +44,10 @@ export default function RegisterScreen() {
       Alert.alert('오류', '비밀번호는 8자 이상이어야 합니다');
       return;
     }
+    if (!Object.values(agreements).every(Boolean)) {
+      Alert.alert('필수 동의', '회원가입 필수 약관과 안내를 모두 확인하고 동의해 주세요.');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -52,6 +62,12 @@ export default function RegisterScreen() {
         grade: gradeNum,
         classNo: classNoNum,
         schoolNumber: schoolNumberNum,
+        agreements: {
+          serviceTerms: true,
+          privacyPolicy: true,
+          anonymousBoardNotice: true,
+          ageOrGuardianConfirmed: true,
+        },
       });
 
       Alert.alert('성공', '회원가입이 완료되었습니다');
@@ -111,6 +127,46 @@ export default function RegisterScreen() {
         returnKeyType="next"
         onSubmitEditing={() => passwordRef.current?.focus()}
       />
+
+      <View style={agreementStyles.box}>
+        <Text style={agreementStyles.heading}>필수 약관 및 개인정보 안내</Text>
+        <Text style={agreementStyles.summary}>
+          익명게시판의 작성자 정보는 다른 학생에게 공개되지 않지만, 신고 처리와 안전한 운영을 위해 관리자에게는 확인될 수 있습니다.
+        </Text>
+        <AgreementRow
+          checked={agreements.serviceTerms}
+          onPress={() => setAgreements((value) => ({ ...value, serviceTerms: !value.serviceTerms }))}
+          title="[필수] 서비스 이용약관 동의"
+          detail="욕설, 괴롭힘, 개인정보 노출, 불법 정보 게시를 금지하며 위반 게시물은 운영자가 삭제할 수 있습니다."
+        />
+        <AgreementRow
+          checked={agreements.privacyPolicy}
+          onPress={() => setAgreements((value) => ({ ...value, privacyPolicy: !value.privacyPolicy }))}
+          title="[필수] 개인정보 수집·이용 동의"
+          detail="계정 운영과 게시판 신고 대응을 위해 회원 정보 및 게시글·댓글과 연결된 내부 작성자 ID를 회원 탈퇴 시까지 처리합니다. 동의를 거부할 수 있으나 가입할 수 없습니다."
+        />
+        <AgreementRow
+          checked={agreements.anonymousBoardNotice}
+          onPress={() => setAgreements((value) => ({ ...value, anonymousBoardNotice: !value.anonymousBoardNotice }))}
+          title="[필수] 익명게시판 운영 안내 확인"
+          detail="익명은 이용자 화면에만 적용됩니다. 권한이 있는 관리자는 정당한 운영 사유를 입력한 후 작성자를 확인할 수 있으며 조회 기록이 남습니다."
+        />
+        <AgreementRow
+          checked={agreements.ageOrGuardianConfirmed}
+          onPress={() => setAgreements((value) => ({ ...value, ageOrGuardianConfirmed: !value.ageOrGuardianConfirmed }))}
+          title="[필수] 연령 및 보호자 확인"
+          detail="만 14세 이상이거나, 만 14세 미만인 경우 법정대리인에게 가입과 개인정보 처리에 관한 동의를 받았음을 확인합니다."
+        />
+        <TouchableOpacity
+          onPress={() => {
+            const checked = !Object.values(agreements).every(Boolean);
+            setAgreements({ serviceTerms: checked, privacyPolicy: checked, anonymousBoardNotice: checked, ageOrGuardianConfirmed: checked });
+          }}
+          style={agreementStyles.allButton}
+        >
+          <Text style={agreementStyles.allText}>필수 항목 전체 동의</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* 비밀번호 */}
       <InputLabel label="비밀번호" />
@@ -206,3 +262,27 @@ function InputLabel({ label }: { label: string }) {
     </Text>
   );
 }
+
+function AgreementRow({ checked, onPress, title, detail }: { checked: boolean; onPress: () => void; title: string; detail: string }) {
+  return (
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={agreementStyles.row}>
+      <View style={[agreementStyles.checkbox, checked && agreementStyles.checkboxChecked]}><Text style={agreementStyles.checkmark}>{checked ? '✓' : ''}</Text></View>
+      <View style={agreementStyles.copy}><Text style={agreementStyles.title}>{title}</Text><Text style={agreementStyles.detail}>{detail}</Text></View>
+    </Pressable>
+  );
+}
+
+const agreementStyles = StyleSheet.create({
+  box: { marginTop: 6, marginBottom: 10, padding: 16, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, backgroundColor: '#FFFFFF' },
+  heading: { color: '#111827', fontSize: 16, fontWeight: '800' },
+  summary: { marginTop: 8, marginBottom: 8, color: '#6B7280', fontSize: 12, lineHeight: 18 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 11 },
+  checkbox: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', marginTop: 1, marginRight: 10, borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 6 },
+  checkboxChecked: { borderColor: '#4F46E5', backgroundColor: '#4F46E5' },
+  checkmark: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  copy: { flex: 1 },
+  title: { color: '#1F2937', fontSize: 13, fontWeight: '700' },
+  detail: { marginTop: 4, color: '#6B7280', fontSize: 11, lineHeight: 17 },
+  allButton: { alignItems: 'center', marginTop: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: '#EEF2FF' },
+  allText: { color: '#4338CA', fontSize: 13, fontWeight: '800' },
+});
