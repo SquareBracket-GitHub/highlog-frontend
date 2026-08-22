@@ -8,3 +8,4 @@ export {
   type PersonalTimetableEntry,
   type SavePersonalTimetableEntry,
 } from './personalTimetables';
+export { mealService, type Meal, type MealDish, type MealsByDate } from './meals';

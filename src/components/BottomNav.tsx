@@ -4,7 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { CommonStyles } from '../styles';
 
 export default function BottomNav({ active, beforeNavigate }: { active: string; beforeNavigate?: (navigate: () => void) => void }) {
-  const navigate = (path: '/schedules' | '/courseSelect' | '/profile') => {
+  const navigate = (path: '/schedules' | '/meals' | '/profile') => {
     const action = () => router.push(path);
     beforeNavigate ? beforeNavigate(action) : action();
   };
@@ -17,9 +17,9 @@ export default function BottomNav({ active, beforeNavigate }: { active: string; 
       />
 
       <NavItem
-        label="과목 설정"
-        active={active === 'course'}
-        onPress={() => navigate('/courseSelect')}
+        label="급식"
+        active={active === 'meals'}
+        onPress={() => navigate('/meals')}
       />
 
       <NavItem
