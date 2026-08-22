@@ -6,7 +6,7 @@ import { boardMembershipService, BoardMembershipRequest } from '../services/boar
 import { getErrorMessage } from '../services/api';
 import { getCurrentStudent } from '../store/auth';
 
-const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export default function BoardApprovalsScreen() {
   const [requests, setRequests] = useState<BoardMembershipRequest[]>([]);

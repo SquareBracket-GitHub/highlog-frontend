@@ -10,7 +10,7 @@ import { CommonStyles } from '../styles';
 import { boardMembershipService, BoardMembership } from '../services/boardMemberships';
 import { getCurrentStudent } from '../store/auth';
 
-const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export default function BoardScreen() {
   const [posts, setPosts] = useState<BoardPostSummary[]>([]);

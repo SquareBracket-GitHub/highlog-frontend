@@ -143,7 +143,7 @@ export default function RegisterScreen() {
           checked={agreements.privacyPolicy}
           onPress={() => setAgreements((value) => ({ ...value, privacyPolicy: !value.privacyPolicy }))}
           title="[필수] 개인정보 수집·이용 동의"
-          detail="계정 운영과 게시판 신고 대응을 위해 회원 정보 및 게시글·댓글과 연결된 내부 작성자 ID를 회원 탈퇴 시까지 처리합니다. 동의를 거부할 수 있으나 가입할 수 없습니다."
+          detail="계정 운영, 문의 처리와 게시판 신고 대응을 위해 회원 정보 및 게시글·댓글과 연결된 내부 작성자 ID를 회원 탈퇴 시까지 처리합니다. 동의를 거부할 수 있으나 가입할 수 없습니다."
         />
         <AgreementRow
           checked={agreements.anonymousBoardNotice}

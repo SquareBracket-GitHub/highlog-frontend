@@ -7,7 +7,7 @@ import { getErrorMessage } from '../services/api';
 import { getCurrentStudent } from '../store/auth';
 import { boardMembershipService } from '../services/boardMemberships';
 
-const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const formatDate = (value: string) => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export default function BoardPostScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();

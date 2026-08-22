@@ -4,7 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { CommonStyles } from '../styles';
 
 export default function BottomNav({ active, beforeNavigate }: { active: string; beforeNavigate?: (navigate: () => void) => void }) {
-  const navigate = (path: '/schedules' | '/meals' | '/board' | '/profile') => {
+  const navigate = (path: '/schedules' | '/meals' | '/board' | '/inquiries' | '/profile') => {
     const action = () => router.push(path);
     beforeNavigate ? beforeNavigate(action) : action();
   };
@@ -26,6 +26,12 @@ export default function BottomNav({ active, beforeNavigate }: { active: string; 
         label="익명게시판"
         active={active === 'board'}
         onPress={() => navigate('/board')}
+      />
+
+      <NavItem
+        label="문의"
+        active={active === 'inquiries'}
+        onPress={() => navigate('/inquiries')}
       />
 
       <NavItem
