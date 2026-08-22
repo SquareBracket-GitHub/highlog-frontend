@@ -3,3 +3,8 @@ export { studentService, type Student, type CreateStudentInput, type AuthSession
 export { courseService, type Course, type CreateCourseInput, type DaySchedule } from './courses';
 export { enrolmentService, type Enrolment } from './enrolments';
 export { classTimetableService, type ClassTimetableSlot } from './classTimetables';
+export {
+  personalTimetableService,
+  type PersonalTimetableEntry,
+  type SavePersonalTimetableEntry,
+} from './personalTimetables';
